@@ -122,7 +122,7 @@ impl Instruction {
                 println!("{} {}", ansi_term::Color::Yellow.paint("Debug:"), ansi_term::Color::Blue.paint(&format!("line {}", index + 1)));
                 state.dump();
                 let mut s = String::new();
-                std::io::stdin().read_line(&mut s).expect("io error");
+                report_error_if_none(std::io::stdin().read_line(&mut s).ok(), "IO error. Did you close stdin?");
             }
             Instruction::Zero { reg } => state[reg] = Wrapping(0),
             Instruction::Mov { to, from } => state[to] = state[from],
@@ -136,9 +136,9 @@ impl Instruction {
             Instruction::Not { reg } => state.with_zero(reg, !state[reg]),
             Instruction::Shl { reg, amount } => state[reg] = Wrapping(state[reg].0 << amount),
             Instruction::Shr { reg, amount } => state[reg] = Wrapping(state[reg].0 >> amount),
-            Instruction::Jz { label } => if state.zero { return *state.labels.get(label).expect(&format!("unknown label line {}", index + 1)) },
-            Instruction::Jnz { label } => if !state.zero { return *state.labels.get(label).expect(&format!("unknown label line {}", index + 1)) },
-            Instruction::J { label } => return *state.labels.get(label).expect(&format!("unknown label line {}", index + 1)),
+            Instruction::Jz { label } => if state.zero { return *report_error_if_none(state.labels.get(label), &format!("unknown label `{}` on line {}", label, index + 1)) },
+            Instruction::Jnz { label } => if !state.zero { return *report_error_if_none(state.labels.get(label), &format!("unknown label `{}` on line {}", label, index + 1)) },
+            Instruction::J { label } => return *report_error_if_none(state.labels.get(label), &format!("unknown label `{}` on line {}", label, index + 1)),
         }
         index + 1
     }
@@ -148,6 +148,7 @@ impl Instruction {
             let lowercase = src.to_lowercase();
             let code = lowercase.split_once("//").map(|(a, _)| a).unwrap_or(&lowercase);
             let code = lowercase.split_once(";").map(|(a, _)| a).unwrap_or(&code);
+            let code = lowercase.split_once("#").map(|(a, _)| a).unwrap_or(&code);
             let mut split = code.split_whitespace();
             let first = split.next();
             let operands = split.collect::<String>();
@@ -170,7 +171,7 @@ impl Instruction {
                     "jz" => Instruction::Jz { label: read_label(&mut operands, index) },
                     "jnz" => Instruction::Jnz { label: read_label(&mut operands, index) },
                     "j" => Instruction::J { label: read_label(&mut operands, index) },
-                    label => { state.add_label(label.split_once(":").expect("garbage instruction").0.to_string(), index); Instruction::Noop },
+                    label => { state.add_label(report_error_if_none(label.split_once(":"), &format!("garbage instruction `{}`", label)).0.to_string(), index); Instruction::Noop },
                 },
                 None => Instruction::Noop,
             }
@@ -180,8 +181,13 @@ impl Instruction {
 
 fn read_reg<'a>(operands: &mut impl Iterator<Item = &'a str>, index: usize) -> Register {
     match read_reg_(operands) {
-        Some(v) => v,
-        None => panic!("garabge following instruction on line {}", index + 1),
+        Some(reg) => {
+            if reg >= 8 {
+                report_error(&format!("r{} does not exist", reg));
+            }
+            reg
+        },
+        None => report_error(&format!("garbage following instruction on line {}", index + 1)),
     }
 }
 
@@ -195,7 +201,7 @@ fn read_reg_<'a>(i: &mut impl Iterator<Item = &'a str>) -> Option<Register> {
 fn read_imm<'a>(operands: &mut impl Iterator<Item = &'a str>, index: usize) -> u64 {
     match read_imm_(operands) {
         Some(v) => v,
-        None => panic!("garbage following instruction on line {}", index + 1),
+        None => report_error(&format!("garbage following instruction on line {}", index + 1)),
     }
 }
 
@@ -207,7 +213,7 @@ fn read_imm_<'a>(i: &mut impl Iterator<Item = &'a str>) -> Option<u64> {
 fn read_label<'a>(operands: &mut impl Iterator<Item = &'a str>, index: usize) -> String {
     match read_label_(operands) {
         Some(v) => v,
-        None => panic!("garbage following instruction on line {}", index + 1),
+        None => report_error(&format!("garbage following instruction on line {}", index + 1)),
     }
 }
 
@@ -216,10 +222,49 @@ fn read_label_<'a>(i: &mut impl Iterator<Item = &'a str>) -> Option<String> {
     Some(n.to_string())
 }
 
+fn get_source() -> Option<String> {
+    std::fs::read_to_string(std::env::args().nth(1)?).ok()
+}
+
+fn interpret_arg(arg: String) -> Result<(usize, u64), String> {
+    let (before, after) = arg.split_once('=').ok_or_else(|| arg.clone())?;
+    let after = after.parse().map_err(|_| arg.clone())?;
+    if !before.starts_with("r") {
+        Err(arg)
+    }
+    else {
+        let reg = before[1..].parse().map_err(|_| arg.clone())?;
+        if reg >= 8 {
+            report_error(&format!("r{} does not exist", reg));
+        }
+        Ok((reg, after))
+    }
+}
+
+fn report_error_if_none<T>(opt: Option<T>, error: &str) -> T {
+    match opt {
+        Some(v) => v,
+        None => report_error(error),
+    }
+}
+
+fn report_error(error: &str) -> ! {
+    eprintln!("{} {}", ansi_term::Color::Red.paint("Error: "), error);
+    std::process::exit(1);
+}
+
 fn main() {
-    let input = std::env::args().nth(1).unwrap();
-    let content = std::fs::read_to_string(&input).unwrap();
+    let content = match get_source() {
+        Some(v) => v,
+        None => report_error("No assembly file provided or unable to read file"),
+    };
     let mut state = State::new();
+    for arg in std::env::args().skip(2).map(interpret_arg) {
+        match arg {
+            Ok((reg, val)) => state[&reg] = Wrapping(val),
+            Err(arg) => report_error(&format!("Unable to parse arg: `{}`", arg)),
+        }
+    }
     let instruction: Vec<Instruction> = content.lines()
         .enumerate()
         .map(Instruction::parse(&mut state))
