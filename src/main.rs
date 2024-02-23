@@ -228,8 +228,8 @@ fn get_source() -> Option<String> {
 
 fn interpret_arg(arg: String) -> Result<(usize, u64), String> {
     let (before, after) = arg.split_once('=').ok_or_else(|| arg.clone())?;
-    let after = after.parse().map_err(|_| arg.clone())?;
-    if !before.starts_with("r") {
+    let after = after.parse().or_else(|_| after.parse::<i64>().map(|i| i as u64)).map_err(|_| arg.clone())?;
+    if !(before.starts_with("r") || before.starts_with("R")) {
         Err(arg)
     }
     else {
