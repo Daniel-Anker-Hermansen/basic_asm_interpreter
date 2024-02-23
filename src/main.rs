@@ -153,7 +153,7 @@ impl Instruction {
             let first = split.next();
             let operands = split.collect::<Vec<_>>().join(" ");
             let mut operands = operands.split(",");
-            match first {
+            let val =match first {
                 Some(first) => match first.trim() {
                     "zero" => Instruction::Zero { reg: read_reg(&mut operands, index) },
                     "debug" => Instruction::Debug,
@@ -171,10 +171,14 @@ impl Instruction {
                     "jz" => Instruction::Jz { label: read_label(&mut operands, index) },
                     "jnz" => Instruction::Jnz { label: read_label(&mut operands, index) },
                     "j" => Instruction::J { label: read_label(&mut operands, index) },
-                    label => { state.add_label(report_error_if_none(label.split_once(":"), &format!("garbage instruction `{}`", label)).0.to_string(), index); Instruction::parse(state)((index, &operands.collect::<Vec<_>>().join(","))) },
+                    label => return { state.add_label(report_error_if_none(label.split_once(":"), &format!("garbage instruction `{}`", label)).0.to_string(), index); Instruction::parse(state)((index, &operands.collect::<Vec<_>>().join(","))) },
                 },
                 None => Instruction::Noop,
+            };
+            if operands.filter(|k| !k.trim().is_empty()).count() > 0 {
+                report_error(&format!("Too many operands on line {}", index + 1));
             }
+            val
         }
     }
 }
