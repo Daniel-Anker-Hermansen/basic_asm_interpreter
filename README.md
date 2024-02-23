@@ -10,6 +10,6 @@ The registers at the beginning can be set with e.g. `r0=4`
 For example running `test.s` with r0 set to 10 and r1 set to 20 uses the following arguments `test.s r0=10 r1=20`
 
 ## Install
-Binaries for x86_64-linux, armv7-linux and x86_64-windows can be found [here](https://github.com/Daniel-Anker-Hermansen/basic_asm_interpreter/releases/tag/v1.1.0)
+Binaries for x86_64-linux and armv7-linux can be found [here](https://github.com/Daniel-Anker-Hermansen/basic_asm_interpreter/releases/tag/v1.1.1)
 
 You can compile from source with cargo using `cargo build --release`
