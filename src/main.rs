@@ -151,7 +151,7 @@ impl Instruction {
             let code = lowercase.split_once("#").map(|(a, _)| a).unwrap_or(&code);
             let mut split = code.split_whitespace();
             let first = split.next();
-            let operands = split.collect::<String>();
+            let operands = split.collect::<Vec<_>>().join(" ");
             let mut operands = operands.split(",");
             match first {
                 Some(first) => match first.trim() {
@@ -171,7 +171,7 @@ impl Instruction {
                     "jz" => Instruction::Jz { label: read_label(&mut operands, index) },
                     "jnz" => Instruction::Jnz { label: read_label(&mut operands, index) },
                     "j" => Instruction::J { label: read_label(&mut operands, index) },
-                    label => { state.add_label(report_error_if_none(label.split_once(":"), &format!("garbage instruction `{}`", label)).0.to_string(), index); Instruction::Noop },
+                    label => { state.add_label(report_error_if_none(label.split_once(":"), &format!("garbage instruction `{}`", label)).0.to_string(), index); Instruction::parse(state)((index, &operands.collect::<Vec<_>>().join(","))) },
                 },
                 None => Instruction::Noop,
             }
