@@ -149,6 +149,7 @@ impl Instruction {
             let code = lowercase.split_once("//").map(|(a, _)| a).unwrap_or(&lowercase);
             let code = lowercase.split_once(";").map(|(a, _)| a).unwrap_or(&code);
             let code = lowercase.split_once("#").map(|(a, _)| a).unwrap_or(&code);
+            let code = lowercase.split_once("@").map(|(a, _)| a).unwrap_or(&code);
             let mut split = code.split_whitespace();
             let first = split.next();
             let operands = split.collect::<Vec<_>>().join(" ");
