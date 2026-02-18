@@ -10,6 +10,38 @@ The registers at the beginning can be set with e.g. `r0=4`
 For example running `test.s` with r0 set to 10 and r1 set to 20 uses the following arguments `test.s r0=10 r1=20`
 
 ## Install
-Binaries for x86_64-linux and armv7-linux can be found [here](https://github.com/Daniel-Anker-Hermansen/basic_asm_interpreter/releases/tag/v1.1.1)
+
+### Raspberry Pi (armv7)
+
+It can be installed using the following command
+
+```
+wget https://github.com/Daniel-Anker-Hermansen/basic_asm_interpreter/releases/download/v1.1.1/interpreter-armv7-linux
+chmod +x interpreter-armv7-linux
+sudo mv interpreter-armv7-linux /usr/bin/interpreter
+
+```
+
+### x86-64 Linux
+
+```
+wget https://github.com/Daniel-Anker-Hermansen/basic_asm_interpreter/releases/download/v1.1.1/interpreter-x86_64-linux
+chmod +x interpreter-x86_64-linux
+sudo mv interpreter-x86_64-linux /usr/bin/interpreter
+```
+
+### Compiling from source
 
 You can compile from source with cargo using `cargo build --release`
+
+## Example
+
+Suppose you have the following code in `main.s`
+
+```
+mov r0, r1
+not r0
+inc r0
+```
+
+Then you can run `interpreter main.s r1=12`, then it should output that `r0` is `-12`.
