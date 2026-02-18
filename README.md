@@ -13,13 +13,12 @@ For example running `test.s` with r0 set to 10 and r1 set to 20 uses the followi
 
 ### Raspberry Pi (armv7)
 
-It can be installed using the following command
+It can be installed using the following commands
 
 ```
 wget https://github.com/Daniel-Anker-Hermansen/basic_asm_interpreter/releases/download/v1.1.1/interpreter-armv7-linux
 chmod +x interpreter-armv7-linux
 sudo mv interpreter-armv7-linux /usr/bin/interpreter
-
 ```
 
 ### x86-64 Linux
