@@ -112,6 +112,9 @@ enum Instruction {
     J {
         label: Label,
     },
+    Mirror { // Add the "Mirror" instruction for task 3 from the first assembly hand-in
+        reg: Register,
+    }
 }
 
 impl Instruction {
@@ -139,6 +142,7 @@ impl Instruction {
             Instruction::Jz { label } => if state.zero { return *report_error_if_none(state.labels.get(label), &format!("unknown label `{}` on line {}", label, index + 1)) },
             Instruction::Jnz { label } => if !state.zero { return *report_error_if_none(state.labels.get(label), &format!("unknown label `{}` on line {}", label, index + 1)) },
             Instruction::J { label } => return *report_error_if_none(state.labels.get(label), &format!("unknown label `{}` on line {}", label, index + 1)),
+            Instruction::Mirror { reg } => state[reg] = state[reg].reverse_bits(), // Implement "Mirror"
         }
         index + 1
     }
@@ -172,6 +176,7 @@ impl Instruction {
                     "jz" => Instruction::Jz { label: read_label(&mut operands, index) },
                     "jnz" => Instruction::Jnz { label: read_label(&mut operands, index) },
                     "j" => Instruction::J { label: read_label(&mut operands, index) },
+                    "mirror" => Instruction::Mirror {reg: read_reg(&mut operands, index) }, // add the match case for "Mirror"
                     label => return { state.add_label(report_error_if_none(label.split_once(":"), &format!("garbage instruction `{}`", label)).0.to_string(), index); Instruction::parse(state)((index, &operands.collect::<Vec<_>>().join(","))) },
                 },
                 None => Instruction::Noop,
